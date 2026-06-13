@@ -1,0 +1,99 @@
+from flask import Flask, render_template, jsonify
+import random
+import time
+
+app = Flask(__name__)
+
+# Simulated shipment state
+shipment_data = {
+    "temperature": 4.0,
+    "humidity": 65,
+    "location": "In Transit",
+    "risk": "LOW",
+    "spoiled": False
+}
+
+def calculate_risk(temp):
+    if temp <= 4:
+        return "LOW", 10
+    elif temp <= 8:
+        return "MEDIUM", 40
+    else:
+        return "HIGH", 80
+
+@app.route('/')
+def dashboard():
+    return render_template('index.html')
+
+@app.route('/data')
+def get_data():
+    # Simulate temperature fluctuation
+    shipment_data["temperature"] += random.uniform(-0.5, 1.5)
+
+    # Clamp temperature
+    shipment_data["temperature"] = round(max(0, shipment_data["temperature"]), 2)
+
+    # Predict risk
+    risk, score = calculate_risk(shipment_data["temperature"])
+    shipment_data["risk"] = risk
+
+    return jsonify({
+        "temperature": shipment_data["temperature"],
+        "humidity": shipment_data["humidity"],
+        "risk": shipment_data["risk"],
+        "risk_score": score,
+        "timestamp": time.strftime("%H:%M:%S")
+    })
+
+if __name__ == '__main__':
+    app.run(debug=True)
+      <!DOCTYPE html>
+<html>
+<head>
+    <title>Food Transport Monitoring</title>
+    <script src="/static/script.js"></script>
+    <style>
+        body { font-family: Arial; text-align: center; }
+        .card { border: 1px solid #ddd; padding: 20px; margin: 20px; }
+        .low { color: green; }
+        .medium { color: orange; }
+        .high { color: red; }
+    </style>
+</head>
+<body>
+
+    <h1>🚚 Food Transport Monitoring Dashboard</h1>
+
+    <div class="card">
+        <h2>Temperature: <span id="temp">--</span> °C</h2>
+        <h3>Humidity: <span id="humidity">--</span>%</h3>
+        <h3>Risk Level: <span id="risk">--</span></h3>
+        <h3>Risk Score: <span id="score">--</span>%</h3>
+        <h4>Last Updated: <span id="time">--</span></h4>
+    </div>
+
+</body>
+</html>
+function fetchData() {
+    fetch('/data')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("temp").innerText = data.temperature;
+            document.getElementById("humidity").innerText = data.humidity;
+            document.getElementById("risk").innerText = data.risk;
+            document.getElementById("score").innerText = data.risk_score;
+            document.getElementById("time").innerText = data.timestamp;
+
+            let riskEl = document.getElementById("risk");
+
+            riskEl.className = "";
+            if (data.risk === "LOW") riskEl.classList.add("low");
+            if (data.risk === "MEDIUM") riskEl.classList.add("medium");
+            if (data.risk === "HIGH") riskEl.classList.add("high");
+        });
+}
+
+// Refresh every 2 seconds
+setInterval(fetchData, 2000);
+``
+      
